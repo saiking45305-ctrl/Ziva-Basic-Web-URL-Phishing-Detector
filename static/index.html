@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ziva — Basic Web URL Phishing Detector</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <svg class="brand-logo" width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2L3 6V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V6L12 2Z" fill="#0a0a0a" stroke="#dc2626" stroke-width="2"/>
+          <path d="M9 11.5L11 13.5L15 9.5" stroke="#ef4444" stroke-width="2.5"/>
+        </svg>
+        <div class="brand-text">
+          <h1 class="brand-name">Ziva</h1>
+          <p class="brand-tagline">Check before you click.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="/api/docs" target="_blank" rel="noopener" class="btn btn-outline btn-sm">API Docs</a>
+        <button id="theme-toggle" class="btn btn-icon" title="Toggle theme" aria-label="Toggle light/dark theme">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    <div class="guarantee-banner">
+      <span><strong>Pure Static Analysis:</strong> Ziva never fetches, visits, or resolves submitted URLs. 100% offline.</span>
+    </div>
+
+    <section class="card analyzer-card">
+      <form id="analyze-form" class="analyze-form">
+        <label for="analyzer-input" class="form-label">Paste a suspicious link to inspect</label>
+        <div class="input-group">
+          <input type="text" id="analyzer-input" class="url-input" placeholder="e.g. paypal-verify-account-login.example" required maxlength="2048" autocomplete="off" spellcheck="false">
+          <button type="button" id="clear-input-btn" class="btn-clear hidden" aria-label="Clear input">&times;</button>
+          <button type="submit" id="analyze-btn" class="btn btn-primary">
+            <span class="btn-text">Analyze URL</span>
+            <span class="btn-loader hidden"></span>
+          </button>
+        </div>
+        <div id="input-error" class="input-error-msg hidden" role="alert"></div>
+      </form>
+
+      <div class="examples-bar">
+        <span class="examples-label">Try an example:</span>
+        <div class="example-buttons">
+          <button type="button" class="btn-chip chip-danger" data-url="https://paypal-verify-account-login.example">Phishing Hyphens</button>
+          <button type="button" class="btn-chip chip-danger" data-url="https://google.com@evil.com/auth">@ Spoof Trick</button>
+          <button type="button" class="btn-chip chip-warning" data-url="http://paypal.com.evil.xyz">Brand Subdomain</button>
+          <button type="button" class="btn-chip chip-warning" data-url="http://0xC0A80001/login">Hex IP Address</button>
+          <button type="button" class="btn-chip chip-warning" data-url="https://xn--pypal-4ve.com">Punycode</button>
+          <button type="button" class="btn-chip chip-safe" data-url="https://github.com">Safe (GitHub)</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="live-region" class="sr-only" aria-live="polite"></div>
+
+    <section id="results-section" class="results-container hidden">
+      <div class="card result-main-card">
+        <div class="result-header">
+          <h2 class="result-title">URL Safety Verdict</h2>
+          <div id="verdict-badge" class="verdict-badge"></div>
+        </div>
+
+        <div class="defanged-box">
+          <span class="defanged-label">Analyzed URL (Defanged):</span>
+          <code id="display-url" class="defanged-text"></code>
+        </div>
+
+        <div class="score-grid">
+          <div class="score-card">
+            <div class="score-circle-wrapper">
+              <svg class="score-gauge" width="160" height="160" viewBox="0 0 160 160" aria-hidden="true">
+                <circle class="gauge-bg" cx="80" cy="80" r="68"/>
+                <circle id="gauge-fill" class="gauge-fill" cx="80" cy="80" r="68"/>
+              </svg>
+              <div class="score-number-overlay">
+                <span id="score-value" class="score-big">0</span>
+                <span class="score-max">/ 100</span>
+                <span class="score-label">Risk Score</span>
+              </div>
+            </div>
+          </div>
+          <div class="verdict-summary-card">
+            <h3 id="verdict-summary-title">Summary</h3>
+            <p id="verdict-summary-text"></p>
+            <div class="safe-caveat-alert" id="safe-caveat-box">
+              <span><strong>Note:</strong> "Safe" means no known heuristics triggered. It is not an absolute guarantee.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="url-breakdown-section">
+          <h3>URL Anatomy Breakdown</h3>
+          <div class="breakdown-visual" id="breakdown-visual-chips"></div>
+          <table class="breakdown-table">
+            <thead>
+              <tr><th>Component</th><th>Extracted Value</th><th>Security Significance</th></tr>
+            </thead>
+            <tbody id="breakdown-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="findings-section">
+          <h3>Detection Findings <span id="findings-count-badge" class="count-badge">0</span></h3>
+          <div id="findings-list" class="findings-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card education-card">
+      <h2>How to spot phishing links</h2>
+      <ul class="tips-list">
+        <li>Read the domain from <strong>right to left</strong>: the real site is the part just before the first single slash.</li>
+        <li>Anything before an <strong>@</strong> in a link is ignored by the browser.</li>
+        <li>Be wary of <strong>hyphen-stuffed</strong> names like <code>brand-verify-login.com</code>.</li>
+        <li>Look-alike letters (<strong>punycode / homographs</strong>) can fake a trusted brand.</li>
+        <li>Prefer typing the site address yourself over clicking links in unexpected messages.</li>
+      </ul>
+    </section>
+
+    <section class="card history-card">
+      <div class="history-header">
+        <h2>Recent Checks</h2>
+        <button type="button" id="clear-history-btn" class="btn btn-outline btn-sm">Clear History</button>
+      </div>
+      <div id="history-empty" class="history-empty"><p>No recent URL checks yet.</p></div>
+      <div id="history-list" class="history-list hidden"></div>
+    </section>
+  </main>
+  <script src="/static/script.js"></script>
+</body>
+</html>
