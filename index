@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ziva — Basic Web URL Phishing Detector</title>
+  <meta name="description" content="Ziva is a pure static rule-based phishing link analyzer. Check before you click.">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Skip link for keyboard accessibility -->
+  <a href="#analyzer-input" class="skip-link">Skip to URL analyzer</a>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <!-- Inline SVG Shield / Link Check Logo -->
+        <svg class="brand-logo" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 2L3 6V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V6L12 2Z" fill="#0a0a0a" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 11.5L11 13.5L15 9.5" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="brand-text">
+          <h1 class="brand-name">Ziva</h1>
+          <p class="brand-tagline">Check before you click.</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <a href="/api/docs" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">API Docs</a>
+        <button id="theme-toggle" class="btn btn-icon" aria-label="Toggle light and dark mode" title="Toggle theme">
+          <svg id="theme-icon-dark" class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg id="theme-icon-light" class="icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    <!-- Notice Banner -->
+    <div class="guarantee-banner" role="status">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+      <span><strong>Pure Static Analysis:</strong> Ziva never fetches, visits, or resolves the submitted URL. Your analysis is 100% offline and confidential.</span>
+    </div>
+
+    <!-- URL Analyzer Form Section -->
+    <section class="card analyzer-card" aria-labelledby="analyzer-heading">
+      <h2 id="analyzer-heading" class="sr-only">URL Security Analyzer</h2>
+      
+      <form id="analyze-form" class="analyze-form" novalidate>
+        <label for="analyzer-input" class="form-label">
+          Paste a suspicious link to inspect
+        </label>
+        
+        <div class="input-group">
+          <span class="input-prefix-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+          </span>
+          <input
+            type="text"
+            id="analyzer-input"
+            class="url-input"
+            placeholder="e.g. paypal-verify-account-login.example or https://google.com@evil.com"
+            autocomplete="off"
+            spellcheck="false"
+            required
+            maxlength="2048"
+          >
+          <button type="button" id="clear-input-btn" class="btn-clear hidden" aria-label="Clear input field" title="Clear">
+            &times;
+          </button>
+          <button type="submit" id="analyze-btn" class="btn btn-primary">
+            <span class="btn-text">Analyze URL</span>
+            <span class="btn-loader hidden" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <div id="input-error" class="input-error-msg hidden" role="alert"></div>
+      </form>
+
+      <!-- Quick Example Buttons -->
+      <div class="examples-bar">
+        <span class="examples-label">Try an example:</span>
+        <div class="example-buttons">
+          <button type="button" class="btn-chip chip-danger" data-url="https://paypal-verify-account-login.example">
+            Phishing Hyphens
+          </button>
+          <button type="button" class="btn-chip chip-danger" data-url="https://google.com@evil.com/auth">
+            @ Spoof Trick
+          </button>
+          <button type="button" class="btn-chip chip-warning" data-url="http://paypal.com.evil.xyz">
+            Brand Subdomain
+          </button>
+          <button type="button" class="btn-chip chip-warning" data-url="http://0xC0A80001/login">
+            Hex IP Address
+          </button>
+          <button type="button" class="btn-chip chip-warning" data-url="https://xn--pypal-4ve.com">
+            Punycode Homograph
+          </button>
+          <button type="button" class="btn-chip chip-safe" data-url="https://github.com">
+            Safe (GitHub)
+          </button>
+          <button type="button" class="btn-chip chip-safe" data-url="https://www.wikipedia.org">
+            Safe (Wikipedia)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARIA Live Announcement Region -->
+    <div id="live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Results Container -->
+    <section id="results-section" class="results-container hidden" aria-labelledby="results-heading">
+      <div class="card result-main-card">
+        <div class="result-header">
+          <div>
+            <span class="sub-title">Inspection Results</span>
+            <h2 id="results-heading" class="result-title">URL Safety Verdict</h2>
+          </div>
+          <div id="verdict-badge" class="verdict-badge" aria-label="Safety Verdict">
+            <!-- Populated via JS: Safe / Suspicious / High Risk -->
+          </div>
+        </div>
+
+        <!-- Defanged URL display -->
+        <div class="defanged-box">
+          <span class="defanged-label">Analyzed URL (Defanged):</span>
+          <code id="display-url" class="defanged-text"></code>
+        </div>
+
+        <!-- Score Gauge & Overview -->
+        <div class="score-grid">
+          <div class="score-card">
+            <div class="score-circle-wrapper">
+              <svg class="score-gauge" width="160" height="160" viewBox="0 0 160 160">
+                <circle class="gauge-bg" cx="80" cy="80" r="68" />
+                <circle id="gauge-fill" class="gauge-fill" cx="80" cy="80" r="68" />
+              </svg>
+              <div class="score-number-overlay">
+                <span id="score-value" class="score-big">0</span>
+                <span class="score-max">/ 100</span>
+                <span class="score-label">Risk Score</span>
+              </div>
+            </div>
+            
+            <div class="scale-legend">
+              <div class="scale-item"><span class="scale-dot dot-safe"></span> 0–24 Safe</div>
+              <div class="scale-item"><span class="scale-dot dot-warn"></span> 25–59 Suspicious</div>
+              <div class="scale-item"><span class="scale-dot dot-danger"></span> 60+ High Risk</div>
+            </div>
+          </div>
+
+          <div class="verdict-summary-card">
+            <h3 id="verdict-summary-title" class="summary-title">Summary</h3>
+            <p id="verdict-summary-text" class="summary-text"></p>
+            
+            <div class="safe-caveat-alert" id="safe-caveat-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span><strong>Note:</strong> A "Safe" score means no known static heuristics or structural red flags were triggered. It is <em>not an absolute guarantee</em> that the destination is harmless.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- URL Breakdown Section -->
+        <div class="url-breakdown-section">
+          <h3 class="breakdown-title">
+            <span>URL Anatomy Breakdown</span>
+            <span class="breakdown-subtitle">Visual deconstruction to help you identify spoofed parts</span>
+          </h3>
+
+          <div class="breakdown-visual" id="breakdown-visual-chips">
+            <!-- Populated via script: scheme, subdomains, registered_domain, tld, port, path -->
+          </div>
+
+          <div class="breakdown-table-wrapper">
+            <table class="breakdown-table">
+              <thead>
+                <tr>
+                  <th scope="col">Component</th>
+                  <th scope="col">Extracted Value</th>
+                  <th scope="col">Security Significance</th>
+                </tr>
+              </thead>
+              <tbody id="breakdown-table-body">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Findings List -->
+        <div class="findings-section">
+          <h3 class="findings-heading">
+            <span>Detection Findings</span>
+            <span id="findings-count-badge" class="count-badge">0 findings</span>
+          </h3>
+
+          <div id="findings-list" class="findings-list">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recent History Section -->
+    <section class="card history-card" aria-labelledby="history-heading">
+      <div class="history-header">
+        <div class="history-title-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <h2 id="history-heading" class="section-title">Recent Checks</h2>
+          <span class="history-badge" id="history-count">0 / 10</span>
+        </div>
+        <button type="button" id="clear-history-btn" class="btn btn-outline btn-sm">Clear History</button>
+      </div>
+
+      <div id="history-empty" class="history-empty">
+        <p>No recent URL checks yet. Analyze any URL above to build your session history.</p>
+      </div>
+
+      <div id="history-list" class="history-list hidden">
+        <!-- History items inserted via JS -->
+      </div>
+    </section>
+
+    <!-- Educational Section: How to spot phishing links -->
+    <section class="card educational-card" aria-labelledby="edu-heading">
+      <div class="edu-header">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" aria-hidden="true">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+        <h2 id="edu-heading" class="section-title">How to Spot Phishing Links</h2>
+      </div>
+      <p class="edu-intro">
+        Cybercriminals rely on subtle visual deception to trick you into entering credentials on lookalike websites.
+        Here are five cardinal rules to keep in mind:
+      </p>
+
+      <div class="tips-grid">
+        <div class="tip-card">
+          <div class="tip-badge">1</div>
+          <h3 class="tip-title">Inspect the Registered Domain</h3>
+          <p class="tip-desc">
+            In <code>paypal.com.evil.xyz</code>, the actual destination is <strong>evil.xyz</strong>, NOT PayPal.
+            Always read from right to left before the first slash to identify who truly owns the site.
+          </p>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-badge">2</div>
+          <h3 class="tip-title">Watch Out for the "@" Trick</h3>
+          <p class="tip-desc">
+            URLs like <code>https://google.com@attacker.com</code> send your browser directly to <strong>attacker.com</strong>.
+            Everything preceding the <code>@</code> symbol is treated as user credentials and discarded.
+          </p>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-badge">3</div>
+          <h3 class="tip-title">Beware of Hyphen Stacking</h3>
+          <p class="tip-desc">
+            Legitimate services rarely use names like <code>chase-security-verify-login.com</code>.
+            Excessive hyphens joining brand names with urgency terms are a hallmark indicator of phishing.
+          </p>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-badge">4</div>
+          <h3 class="tip-title">Look Out for Homographs</h3>
+          <p class="tip-desc">
+            Non-Latin characters from the Cyrillic or Greek alphabets (e.g., Cyrillic <em>а</em> vs Latin <em>a</em>) can produce identical-looking addresses (Punycode <code>xn--</code>). Check the decoded address carefully.
+          </p>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-badge">5</div>
+          <h3 class="tip-title">Never Rely Solely on HTTPS</h3>
+          <p class="tip-desc">
+            A padlock icon only means the connection is encrypted; it does <strong>not</strong> mean the website is legitimate.
+            Over 80% of modern phishing sites obtain free SSL certificates.
+          </p>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-badge">6</div>
+          <h3 class="tip-title">Raw IP Addresses Are Suspicious</h3>
+          <p class="tip-desc">
+            Public consumer portals do not host customer login pages on bare numeric IP addresses (like <code>http://192.168.1.1</code> or hex codes). If there is no domain name, proceed with extreme caution.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <strong>Ziva</strong> — Static URL Phishing Detector. "Check before you click."
+      </div>
+      <div class="footer-note">
+        Educational heuristic tool. Does not contact, visit, or resolve target URLs.
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/script.js"></script>
+<script src="https://cdn.raccoonai.tech/packages/branding-badge.js?v=7" defer></script></body>
+</html>
